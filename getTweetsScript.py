@@ -8,6 +8,12 @@ from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import pickle
+import datetime
+
+#yields data chronologicaly from the dictionary
+def sortdict(d):
+    for key in sorted(d): yield key,d[key]
+
 
 def downloadTweets():
 	auth = tweepy.OAuthHandler("zzzpwKuwGyls73SOKqL47upvH", "smd6wmph00nLSdDaASpEU4Pr1lwSr7jhUFvFCaC66zdAbBx7PO")
@@ -78,12 +84,16 @@ def wordCloudGraph():
 	#values for tweet emotions
 	worstEmotion = 0
 	bestEmotion = 0
+	#axes for line chart
+	x=[]
+	y=[]
 
 	#read dictionary with all the tweets
 	with open("tweets_dictionary_backup.txt", "rb") as myDictFile:
 		tweets_dictionary = pickle.load(myDictFile)
 
-	for timestamp,tweets in tweets_dictionary.items():
+	#yields data chronologicaly from the dictionary
+	for timestamp,tweets in sortdict(tweets_dictionary):
 		print timestamp
 		for tweet in tweets:
 			overalTweetEmotion = 0
@@ -99,7 +109,10 @@ def wordCloudGraph():
 						#analyze emotion semantics of particular word
 						overalTweetEmotion = overalTweetEmotion + sentiment_dict.get(word,0)
 						words = words + ", " + word	
-				
+			x.append(timestamp)
+			y.append(overalTweetEmotion)
+			if(overalTweetEmotion > 7 or overalTweetEmotion < -7):
+				print tweet
 			if(overalTweetEmotion < worstEmotion):
 				worstEmotion = overalTweetEmotion
 				worstTweet = tweet
@@ -109,22 +122,28 @@ def wordCloudGraph():
 
 	wordcloud = WordCloud(stopwords=STOPWORDS).generate(hashtags)
 	wordcloud2 = WordCloud(stopwords=STOPWORDS,background_color='white',width=1200,height=1000).generate(words)
-	createPlot(wordcloud,wordcloud2)
+	createPlot(wordcloud,wordcloud2,x,y)
 
 	print worstTweet
 	print bestTweet
 
 
-def createPlot(wordCloud,hashcloud):
+def createPlot(wordCloud,hashcloud,x,y):
 	plt.subplot(221)
 	plt.title('Words wordcloud')
 	plt.axis('off')
 	plt.imshow(wordCloud)
+
 	plt.subplot(222)
 	plt.title('Hashtags wordcloud')
 	plt.axis('off')
 	plt.imshow(hashcloud)
+	
+	plt.subplot(313)
+	plt.plot(x,y,'-')
+	plt.title('Sentiment analysis over time')
 	plt.show()
+
 
 
 def main(argv):
@@ -134,18 +153,6 @@ def main(argv):
 	#downloadTweets()
 	wordCloudGraph()
 
-	
-
-	#sorted_wordsCount = sorted(wordsCount.items(), key=operator.itemgetter(1))
-	#print sorted_wordsCount
-
-	#wordsCount.sort(reverse=True) # natively sort tuples by first element
-	#for v,k in wordsCount:
-	#	print "%s: %d" % (k,v)
-
-	#for status in tweepy.Cursor(api.user_timeline).items(200):
-	#	print (status.text)
-	#	f.write(status.text)
 
 if __name__ == "__main__":
 	main(sys.argv)
